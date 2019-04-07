@@ -4,6 +4,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -65,6 +67,30 @@ public class BookKeeperTest {
         assertThat(invoice.getItems()
                           .size(),
                 equalTo(1));
+
+    }
+
+    @Test
+    public void shouldCallCalculateTaxTwiceWhenInoviceHasTwoPositions() {
+        productData = new ProductData(Id.generate(), new Money(new BigDecimal(7822.11), Currency.getInstance("USD")), "next_name",
+                ProductType.DRUG, new Date());
+        int quantity = 5;
+        Money totalCost = productData.getPrice()
+                                     .multiplyBy(quantity);
+        RequestItem item = new RequestItem(productData, quantity, totalCost);
+        invoiceRequest.add(item);
+
+        productData = new ProductData(Id.generate(), new Money(new BigDecimal(34.81), Currency.getInstance("USD")), "next_name",
+                ProductType.FOOD, new Date());
+        quantity = 12;
+        item = new RequestItem(productData, quantity, totalCost);
+        invoiceRequest.add(item);
+
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
+                new Tax(new Money(new BigDecimal(100), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
+        Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        verify(taxPolicy, times(2)).calculateTax(any(), any());
 
     }
 
