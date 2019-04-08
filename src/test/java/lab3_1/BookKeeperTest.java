@@ -88,9 +88,23 @@ public class BookKeeperTest {
 
         when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
                 new Tax(new Money(new BigDecimal(100), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
-        Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
+        bookKeeper.issuance(invoiceRequest, taxPolicy);
 
         verify(taxPolicy, times(2)).calculateTax(any(), any());
+
+    }
+
+    @Test
+    public void shouldReturnEmptyInvoiceIfAnyProducIsAdded() {
+
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
+                new Tax(new Money(new BigDecimal(770), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
+
+        Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        assertThat(invoice.getItems()
+                          .size(),
+                equalTo(0));
 
     }
 
