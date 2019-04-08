@@ -152,4 +152,15 @@ public class BookKeeperTest {
                 equalTo(2));
 
     }
+
+    @Test
+    public void testIfMethodCreateFromInvoiceFactoryIsCalledOnce() {
+        InvoiceFactory invoiceFactory = mock(InvoiceFactory.class);
+        bookKeeper = new BookKeeper(invoiceFactory);
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
+                new Tax(new Money(new BigDecimal(7870), Currency.getInstance("CHF")), "Podatek od towarów i usług (VAT)"));
+        bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        verify(invoiceFactory, times(1)).create(any());
+    }
 }
