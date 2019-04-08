@@ -118,4 +118,38 @@ public class BookKeeperTest {
         verify(taxPolicy, times(0)).calculateTax(any(), any());
 
     }
+
+    @Test
+    public void shouldReturnInvoiceWithTwoPositionsWhenInoviceRequestHasTwoPositionsAdded() {
+        productData = new ProductData(Id.generate(), new Money(new BigDecimal(7822.11), Currency.getInstance("USD")), "next_name",
+                ProductType.DRUG, new Date());
+        int quantity = 5;
+        Money totalCost = productData.getPrice()
+                                     .multiplyBy(quantity);
+        RequestItem item = new RequestItem(productData, quantity, totalCost);
+        invoiceRequest.add(item);
+
+        ProductData secondProductData = new ProductData(Id.generate(), new Money(new BigDecimal(999.81), Currency.getInstance("USD")),
+                "another_name", ProductType.STANDARD, new Date());
+        quantity = 12;
+        item = new RequestItem(secondProductData, quantity, totalCost);
+        invoiceRequest.add(item);
+
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
+                new Tax(new Money(new BigDecimal(100), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
+        Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        assertThat(invoice.getItems()
+                          .get(0)
+                          .getProduct(),
+                equalTo(productData));
+        assertThat(invoice.getItems()
+                          .get(1)
+                          .getProduct(),
+                equalTo(secondProductData));
+        assertThat(invoice.getItems()
+                          .size(),
+                equalTo(2));
+
+    }
 }
