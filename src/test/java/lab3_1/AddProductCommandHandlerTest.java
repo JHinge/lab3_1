@@ -1,8 +1,11 @@
 
 package lab3_1;
 
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,6 +44,7 @@ public class AddProductCommandHandlerTest {
     private Client client;
     Reservation reservation;
     Product product;
+    AddProductCommand addProductCommand;
 
     @Before
     public void initialize() {
@@ -55,6 +59,7 @@ public class AddProductCommandHandlerTest {
         reservation = new Reservation(Id.generate(), Reservation.ReservationStatus.OPENED, new ClientData(Id.generate(), "Client"),
                 new Date());
         product = new Product(Id.generate(), new Money(new BigDecimal(132)), "no_name", ProductType.FOOD);
+
         client = new Client();
 
         Whitebox.setInternalState(addProductCommandHandler, "reservationRepository", reservationRepository);
@@ -71,5 +76,17 @@ public class AddProductCommandHandlerTest {
         when(productRepository.load(any(Id.class))).thenReturn(product);
         addProductCommandHandler.handle(productCommand);
         verify(reservationRepository, times(1)).save(any(Reservation.class));
+    }
+
+    @Test
+    public void shouldNotCallSuggestEquivalentIfProductIsAvailable() {
+        when(reservationRepository.load(productCommand.getOrderId())).thenReturn(reservation);
+        when(productRepository.load(productCommand.getProductId())).thenReturn(product);
+
+        SuggestionService suggestionService = mock(SuggestionService.class);
+        addProductCommandHandler.handle(productCommand);
+
+        assertThat(product.isAvailable(), equalTo(true));
+        verify(suggestionService, never()).suggestEquivalent(any(Product.class), any(Client.class));
     }
 }
