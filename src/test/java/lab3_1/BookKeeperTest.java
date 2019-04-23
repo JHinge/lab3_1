@@ -180,22 +180,42 @@ public class BookKeeperTest {
 
     @Test
     public void shouldReturnInvoiceWithTwoPositionsWhenInoviceRequestHasTwoPositionsAdded() {
-        productData = new ProductData(Id.generate(), new Money(new BigDecimal(7822.11), Currency.getInstance("USD")), "next_name",
-                ProductType.DRUG, new Date());
+        price = moneyBuilder.denomination(new BigDecimal(7822.11))
+                            .currency(Currency.getInstance("USD"))
+                            .build();
+
+        productData = productDataBuilder.price(price)
+                                        .name("next_name")
+                                        .snapshotDate(new Date())
+                                        .type(ProductType.DRUG)
+                                        .build();
+
         int quantity = 5;
-        Money totalCost = productData.getPrice()
-                                     .multiplyBy(quantity);
-        RequestItem item = new RequestItem(productData, quantity, totalCost);
+
+        RequestItem item = requestItemBuilder.productData(productData)
+                                             .quantity(quantity)
+                                             .build();
         invoiceRequest.add(item);
 
-        ProductData secondProductData = new ProductData(Id.generate(), new Money(new BigDecimal(999.81), Currency.getInstance("USD")),
-                "another_name", ProductType.STANDARD, new Date());
+        price = moneyBuilder.denomination(new BigDecimal(999.81))
+                            .build();
+
+        ProductData secondProductData = productDataBuilder.price(price)
+                                                          .name("next_name")
+                                                          .snapshotDate(new Date())
+                                                          .type(ProductType.STANDARD)
+                                                          .build();
         quantity = 12;
-        item = new RequestItem(secondProductData, quantity, totalCost);
+        item = requestItemBuilder.productData(secondProductData)
+                                 .quantity(quantity)
+                                 .build();
         invoiceRequest.add(item);
 
-        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
-                new Tax(new Money(new BigDecimal(100), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
+        Tax tax = taxBuilder.amount(price)
+                            .description("Podatek od towarów i usług (VAT)")
+                            .build();
+
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
         Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
 
         assertThat(invoice.getItems()
