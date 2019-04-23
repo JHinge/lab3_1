@@ -15,6 +15,13 @@ import java.util.Date;
 import org.junit.Before;
 import org.junit.Test;
 
+import pl.com.bottega.ecommerce.builders.BookKeeperBuilder;
+import pl.com.bottega.ecommerce.builders.ClientDataBuilder;
+import pl.com.bottega.ecommerce.builders.InvoiceRequestBuilder;
+import pl.com.bottega.ecommerce.builders.MoneyBuilder;
+import pl.com.bottega.ecommerce.builders.ProductDataBuilder;
+import pl.com.bottega.ecommerce.builders.RequestItemBuilder;
+import pl.com.bottega.ecommerce.builders.TaxBuilder;
 import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.ClientData;
 import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.Id;
 import pl.com.bottega.ecommerce.sales.domain.invoicing.BookKeeper;
@@ -36,28 +43,60 @@ public class BookKeeperTest {
     private Id id;
     private ClientData client;
     private ProductData productData;
+    private Money money;
+
+    BookKeeperBuilder bookKeeperBuilder;
+    InvoiceRequestBuilder invoiceRequestBuilder;
+    ClientDataBuilder clientDataBuilder;
+    RequestItemBuilder requestItemBuilder;
+    MoneyBuilder moneyBuilder;
+    ProductDataBuilder productDataBuilder;
+    TaxBuilder taxBuilder;
 
     @Before
     public void initialize() {
-        bookKeeper = new BookKeeper(new InvoiceFactory());
+        bookKeeperBuilder = new BookKeeperBuilder();
+        invoiceRequestBuilder = new InvoiceRequestBuilder();
+        clientDataBuilder = new ClientDataBuilder();
+        requestItemBuilder = new RequestItemBuilder();
+        moneyBuilder = new MoneyBuilder();
+        productDataBuilder = new ProductDataBuilder();
+        taxBuilder = new TaxBuilder();
+
+        bookKeeper = bookKeeperBuilder.build();
         id = Id.generate();
-        client = new ClientData(id, "Jarosław");
-        invoiceRequest = new InvoiceRequest(client);
+        client = clientDataBuilder.name("Jarosław")
+                                  .id(id)
+                                  .build();
+        invoiceRequest = invoiceRequestBuilder.clientData(client)
+                                              .build();
+
         taxPolicy = mock(TaxPolicy.class);
-        productData = new ProductData(Id.generate(), new Money(new BigDecimal(100), Currency.getInstance("EUR")), "name", ProductType.DRUG,
-                new Date());
+
+        money = moneyBuilder.denomination(new BigDecimal(100))
+                            .currency(Currency.getInstance("EUR"))
+                            .build();
+        productData = productDataBuilder.id(Id.generate())
+                                        .price(money)
+                                        .type(ProductType.DRUG)
+                                        .snapshotDate(new Date())
+                                        .build();
     }
 
     @Test
     public void shouldRetrunInvoiceWithOnePosition() {
         int quantity = 5;
-        Money totalCost = productData.getPrice()
-                                     .multiplyBy(quantity);
-        RequestItem item = new RequestItem(productData, quantity, totalCost);
-        invoiceRequest.add(item);
 
-        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
-                new Tax(new Money(new BigDecimal(100), Currency.getInstance("EUR")), "Podatek od towarów i usług (VAT)"));
+        RequestItem item = requestItemBuilder.productData(productData)
+                                             .quantity(quantity)
+                                             .build();
+        invoiceRequest.add(item);
+        money = moneyBuilder.build();
+        Tax tax = taxBuilder.amount(money)
+                            .description("Podatek od towarów i usług (VAT)")
+                            .build();
+
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
         Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
 
         assertThat(invoice.getItems()
