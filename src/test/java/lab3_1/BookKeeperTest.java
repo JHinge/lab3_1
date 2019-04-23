@@ -43,7 +43,7 @@ public class BookKeeperTest {
     private Id id;
     private ClientData client;
     private ProductData productData;
-    private Money money;
+    private Money price;
 
     BookKeeperBuilder bookKeeperBuilder;
     InvoiceRequestBuilder invoiceRequestBuilder;
@@ -73,11 +73,11 @@ public class BookKeeperTest {
 
         taxPolicy = mock(TaxPolicy.class);
 
-        money = moneyBuilder.denomination(new BigDecimal(100))
+        price = moneyBuilder.denomination(new BigDecimal(100))
                             .currency(Currency.getInstance("EUR"))
                             .build();
         productData = productDataBuilder.id(Id.generate())
-                                        .price(money)
+                                        .price(price)
                                         .type(ProductType.DRUG)
                                         .snapshotDate(new Date())
                                         .build();
@@ -91,8 +91,8 @@ public class BookKeeperTest {
                                              .quantity(quantity)
                                              .build();
         invoiceRequest.add(item);
-        money = moneyBuilder.build();
-        Tax tax = taxBuilder.amount(money)
+        price = moneyBuilder.build();
+        Tax tax = taxBuilder.amount(price)
                             .description("Podatek od towarów i usług (VAT)")
                             .build();
 
@@ -111,22 +111,38 @@ public class BookKeeperTest {
 
     @Test
     public void shouldCallCalculateTaxTwiceWhenInoviceHasTwoPositions() {
-        productData = new ProductData(Id.generate(), new Money(new BigDecimal(7822.11), Currency.getInstance("USD")), "next_name",
-                ProductType.DRUG, new Date());
+        price = moneyBuilder.denomination(new BigDecimal(7822.11))
+                            .currency(Currency.getInstance("USD"))
+                            .build();
+
+        productData = productDataBuilder.price(price)
+                                        .name("next_name")
+                                        .snapshotDate(new Date())
+                                        .build();
         int quantity = 5;
-        Money totalCost = productData.getPrice()
-                                     .multiplyBy(quantity);
-        RequestItem item = new RequestItem(productData, quantity, totalCost);
+
+        RequestItem item = requestItemBuilder.productData(productData)
+                                             .quantity(quantity)
+                                             .build();
         invoiceRequest.add(item);
 
-        productData = new ProductData(Id.generate(), new Money(new BigDecimal(34.81), Currency.getInstance("USD")), "next_name",
-                ProductType.FOOD, new Date());
+        price = moneyBuilder.denomination(new BigDecimal(34.81))
+                            .build();
+
+        productData = productDataBuilder.price(price)
+                                        .name("next_name")
+                                        .snapshotDate(new Date())
+                                        .type(ProductType.FOOD)
+                                        .build();
         quantity = 12;
-        item = new RequestItem(productData, quantity, totalCost);
+        item = requestItemBuilder.productData(productData)
+                                 .quantity(quantity)
+                                 .build();
         invoiceRequest.add(item);
-
-        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
-                new Tax(new Money(new BigDecimal(100), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
+        Tax tax = taxBuilder.amount(price)
+                            .description("Podatek od towarów i usług (VAT)")
+                            .build();
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
         bookKeeper.issuance(invoiceRequest, taxPolicy);
 
         verify(taxPolicy, times(2)).calculateTax(any(), any());
