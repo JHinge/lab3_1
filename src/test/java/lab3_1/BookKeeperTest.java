@@ -43,7 +43,7 @@ public class BookKeeperTest {
     private Id id;
     private ClientData client;
     private ProductData productData;
-    private Money price;
+    private Money money;
 
     BookKeeperBuilder bookKeeperBuilder;
     InvoiceRequestBuilder invoiceRequestBuilder;
@@ -73,11 +73,11 @@ public class BookKeeperTest {
 
         taxPolicy = mock(TaxPolicy.class);
 
-        price = moneyBuilder.denomination(new BigDecimal(100))
+        money = moneyBuilder.denomination(new BigDecimal(100))
                             .currency(Currency.getInstance("EUR"))
                             .build();
         productData = productDataBuilder.id(Id.generate())
-                                        .price(price)
+                                        .price(money)
                                         .type(ProductType.DRUG)
                                         .snapshotDate(new Date())
                                         .build();
@@ -91,8 +91,8 @@ public class BookKeeperTest {
                                              .quantity(quantity)
                                              .build();
         invoiceRequest.add(item);
-        price = moneyBuilder.build();
-        Tax tax = taxBuilder.amount(price)
+        money = moneyBuilder.build();
+        Tax tax = taxBuilder.amount(money)
                             .description("Podatek od towarów i usług (VAT)")
                             .build();
 
@@ -111,11 +111,11 @@ public class BookKeeperTest {
 
     @Test
     public void shouldCallCalculateTaxTwiceWhenInoviceHasTwoPositions() {
-        price = moneyBuilder.denomination(new BigDecimal(7822.11))
+        money = moneyBuilder.denomination(new BigDecimal(7822.11))
                             .currency(Currency.getInstance("USD"))
                             .build();
 
-        productData = productDataBuilder.price(price)
+        productData = productDataBuilder.price(money)
                                         .name("next_name")
                                         .snapshotDate(new Date())
                                         .build();
@@ -126,10 +126,10 @@ public class BookKeeperTest {
                                              .build();
         invoiceRequest.add(item);
 
-        price = moneyBuilder.denomination(new BigDecimal(34.81))
+        money = moneyBuilder.denomination(new BigDecimal(34.81))
                             .build();
 
-        productData = productDataBuilder.price(price)
+        productData = productDataBuilder.price(money)
                                         .name("next_name")
                                         .snapshotDate(new Date())
                                         .type(ProductType.FOOD)
@@ -139,7 +139,7 @@ public class BookKeeperTest {
                                  .quantity(quantity)
                                  .build();
         invoiceRequest.add(item);
-        Tax tax = taxBuilder.amount(price)
+        Tax tax = taxBuilder.amount(money)
                             .description("Podatek od towarów i usług (VAT)")
                             .build();
         when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
@@ -151,10 +151,10 @@ public class BookKeeperTest {
 
     @Test
     public void shouldReturnEmptyInvoiceIfAnyProducIsAdded() {
-        price = moneyBuilder.denomination(new BigDecimal(770))
+        money = moneyBuilder.denomination(new BigDecimal(770))
                             .currency(Currency.getInstance("USD"))
                             .build();
-        Tax tax = taxBuilder.amount(price)
+        Tax tax = taxBuilder.amount(money)
                             .description("Podatek od towarów i usług (VAT)")
                             .build();
         when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
@@ -180,11 +180,11 @@ public class BookKeeperTest {
 
     @Test
     public void shouldReturnInvoiceWithTwoPositionsWhenInoviceRequestHasTwoPositionsAdded() {
-        price = moneyBuilder.denomination(new BigDecimal(7822.11))
+        money = moneyBuilder.denomination(new BigDecimal(7822.11))
                             .currency(Currency.getInstance("USD"))
                             .build();
 
-        productData = productDataBuilder.price(price)
+        productData = productDataBuilder.price(money)
                                         .name("next_name")
                                         .snapshotDate(new Date())
                                         .type(ProductType.DRUG)
@@ -197,10 +197,10 @@ public class BookKeeperTest {
                                              .build();
         invoiceRequest.add(item);
 
-        price = moneyBuilder.denomination(new BigDecimal(999.81))
+        money = moneyBuilder.denomination(new BigDecimal(999.81))
                             .build();
 
-        ProductData secondProductData = productDataBuilder.price(price)
+        ProductData secondProductData = productDataBuilder.price(money)
                                                           .name("next_name")
                                                           .snapshotDate(new Date())
                                                           .type(ProductType.STANDARD)
@@ -211,7 +211,7 @@ public class BookKeeperTest {
                                  .build();
         invoiceRequest.add(item);
 
-        Tax tax = taxBuilder.amount(price)
+        Tax tax = taxBuilder.amount(money)
                             .description("Podatek od towarów i usług (VAT)")
                             .build();
 
@@ -235,9 +235,16 @@ public class BookKeeperTest {
     @Test
     public void testIfMethodCreateFromInvoiceFactoryIsCalledOnce() {
         InvoiceFactory invoiceFactory = mock(InvoiceFactory.class);
-        bookKeeper = new BookKeeper(invoiceFactory);
-        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
-                new Tax(new Money(new BigDecimal(7870), Currency.getInstance("CHF")), "Podatek od towarów i usług (VAT)"));
+        bookKeeper = bookKeeperBuilder.factory(invoiceFactory)
+                                      .build();
+        money = moneyBuilder.currency(Currency.getInstance("CHF"))
+                            .denomination(new BigDecimal(7870))
+                            .build();
+        Tax tax = taxBuilder.amount(money)
+                            .description("Podatek od towarów i usług (VAT)")
+                            .build();
+
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
         bookKeeper.issuance(invoiceRequest, taxPolicy);
 
         verify(invoiceFactory, times(1)).create(any());
