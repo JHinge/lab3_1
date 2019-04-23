@@ -151,9 +151,13 @@ public class BookKeeperTest {
 
     @Test
     public void shouldReturnEmptyInvoiceIfAnyProducIsAdded() {
-
-        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
-                new Tax(new Money(new BigDecimal(770), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
+        price = moneyBuilder.denomination(new BigDecimal(770))
+                            .currency(Currency.getInstance("USD"))
+                            .build();
+        Tax tax = taxBuilder.amount(price)
+                            .description("Podatek od towarów i usług (VAT)")
+                            .build();
+        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(tax);
 
         Invoice invoice = bookKeeper.issuance(invoiceRequest, taxPolicy);
 
