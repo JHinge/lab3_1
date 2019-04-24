@@ -6,6 +6,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,7 +42,7 @@ public class AddProductCommandHandlerTest {
     private ClientRepository clientRepository;
     private SystemContext systemContext;
     private AddProductCommand productCommand;
-    private Client client;
+    private Reservation reservationSpy;
     Reservation reservation;
     Product product;
     AddProductCommand addProductCommand;
@@ -60,13 +61,15 @@ public class AddProductCommandHandlerTest {
                 new Date());
         product = new Product(Id.generate(), new Money(new BigDecimal(132)), "no_name", ProductType.FOOD);
 
-        client = new Client();
+        // client = new Client();
 
         Whitebox.setInternalState(addProductCommandHandler, "reservationRepository", reservationRepository);
         Whitebox.setInternalState(addProductCommandHandler, "productRepository", productRepository);
         Whitebox.setInternalState(addProductCommandHandler, "suggestionService", suggestionService);
         Whitebox.setInternalState(addProductCommandHandler, "clientRepository", clientRepository);
         Whitebox.setInternalState(addProductCommandHandler, "systemContext", systemContext);
+
+        reservationSpy = spy(reservation);
     }
 
     @Test
@@ -88,5 +91,13 @@ public class AddProductCommandHandlerTest {
 
         assertThat(product.isAvailable(), equalTo(true));
         verify(suggestionService, never()).suggestEquivalent(any(Product.class), any(Client.class));
+    }
+
+    @Test
+    public void shouldUseAddMethodOnce() {
+        when(reservationRepository.load(any(Id.class))).thenReturn(reservationSpy);
+        when(productRepository.load(any(Id.class))).thenReturn(product);
+        addProductCommandHandler.handle(productCommand);
+        verify(reservationSpy, times(1)).add(product, 6);
     }
 }
