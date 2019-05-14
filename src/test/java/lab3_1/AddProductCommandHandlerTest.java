@@ -42,9 +42,8 @@ public class AddProductCommandHandlerTest {
     private SystemContext systemContext;
     private AddProductCommand productCommand;
     private Client client;
-    Reservation reservation;
-    Product product;
-    AddProductCommand addProductCommand;
+    private Reservation reservation;
+    private Product product;
 
     @Before
     public void initialize() {
