@@ -127,8 +127,6 @@ public class BookKeeperTest {
                             .build();
 
         productData = productDataBuilder.price(money)
-                                        .name("next_name")
-                                        .snapshotDate(new Date())
                                         .type(ProductType.FOOD)
                                         .build();
         quantity = 12;
