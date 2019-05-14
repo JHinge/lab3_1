@@ -82,10 +82,25 @@ public class AddProductCommandHandlerTest {
         when(reservationRepository.load(productCommand.getOrderId())).thenReturn(reservation);
         when(productRepository.load(productCommand.getProductId())).thenReturn(product);
 
-        SuggestionService suggestionService = mock(SuggestionService.class);
+        // SuggestionService suggestionService = mock(SuggestionService.class);
         addProductCommandHandler.handle(productCommand);
 
         assertThat(product.isAvailable(), equalTo(true));
         verify(suggestionService, never()).suggestEquivalent(any(Product.class), any(Client.class));
+    }
+
+    @Test
+    public void shouldSuggestEquivalentWhenProductIsNotAvailable() {
+        Product equivalent = new Product(Id.generate(), new Money(20), "eqv", ProductType.STANDARD);
+
+        when(clientRepository.load(new Id("1"))).thenReturn(client);
+        when(reservationRepository.load(productCommand.getOrderId())).thenReturn(reservation);
+        when(productRepository.load(productCommand.getProductId())).thenReturn(product);
+        when(suggestionService.suggestEquivalent(product, client)).thenReturn(equivalent);
+        product.markAsRemoved();
+
+        addProductCommandHandler.handle(productCommand);
+
+        verify(suggestionService).suggestEquivalent(product, client);
     }
 }
