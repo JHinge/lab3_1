@@ -15,7 +15,6 @@ import java.util.Date;
 import org.junit.Before;
 import org.junit.Test;
 
-import pl.com.bottega.ecommerce.builders.BookKeeperBuilder;
 import pl.com.bottega.ecommerce.builders.ClientDataBuilder;
 import pl.com.bottega.ecommerce.builders.InvoiceRequestBuilder;
 import pl.com.bottega.ecommerce.builders.MoneyBuilder;
@@ -45,7 +44,6 @@ public class BookKeeperTest {
     private ProductData productData;
     private Money money;
 
-    BookKeeperBuilder bookKeeperBuilder;
     InvoiceRequestBuilder invoiceRequestBuilder;
     ClientDataBuilder clientDataBuilder;
     RequestItemBuilder requestItemBuilder;
@@ -55,7 +53,6 @@ public class BookKeeperTest {
 
     @Before
     public void initialize() {
-        bookKeeperBuilder = new BookKeeperBuilder();
         invoiceRequestBuilder = new InvoiceRequestBuilder();
         clientDataBuilder = new ClientDataBuilder();
         requestItemBuilder = new RequestItemBuilder();
@@ -63,7 +60,7 @@ public class BookKeeperTest {
         productDataBuilder = new ProductDataBuilder();
         taxBuilder = new TaxBuilder();
 
-        bookKeeper = bookKeeperBuilder.build();
+        bookKeeper = new BookKeeper(new InvoiceFactory());
         id = Id.generate();
         client = clientDataBuilder.name("Jarosław")
                                   .id(id)
@@ -235,8 +232,7 @@ public class BookKeeperTest {
     @Test
     public void testIfMethodCreateFromInvoiceFactoryIsCalledOnce() {
         InvoiceFactory invoiceFactory = mock(InvoiceFactory.class);
-        bookKeeper = bookKeeperBuilder.factory(invoiceFactory)
-                                      .build();
+        bookKeeper = new BookKeeper(invoiceFactory);
         money = moneyBuilder.currency(Currency.getInstance("CHF"))
                             .denomination(new BigDecimal(7870))
                             .build();
