@@ -163,12 +163,9 @@ public class BookKeeperTest {
     }
 
     @Test
-    public void shouldNotCallCalculateTaxTwiceWhenInoviceIsEmpty() {
+    public void shouldNotCallCalculateTaxWhenInoviceIsEmpty() {
 
-        when(taxPolicy.calculateTax(any(ProductType.class), any(Money.class))).thenReturn(
-                new Tax(new Money(new BigDecimal(103), Currency.getInstance("USD")), "Podatek od towarów i usług (VAT)"));
         bookKeeper.issuance(invoiceRequest, taxPolicy);
-
         verify(taxPolicy, times(0)).calculateTax(any(), any());
 
     }
