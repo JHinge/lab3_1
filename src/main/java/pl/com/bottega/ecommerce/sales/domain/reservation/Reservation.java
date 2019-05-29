@@ -14,138 +14,147 @@ import pl.com.bottega.ecommerce.sales.domain.offer.OfferItem;
 import pl.com.bottega.ecommerce.sales.domain.productscatalog.Product;
 import pl.com.bottega.ecommerce.sharedkernel.Money;
 
-public class Reservation extends BaseAggregateRoot{
-	public enum ReservationStatus {
-		OPENED, CLOSED
-	}
+public class Reservation extends BaseAggregateRoot {
 
-	
-	private ReservationStatus status;
+    public enum ReservationStatus {
+        OPENED,
+        CLOSED
+    }
 
-	
-	private List<ReservationItem> items;
+    private ReservationStatus status;
 
-	
-	private ClientData clientData;
+    private List<ReservationItem> items;
 
-	private Date createDate;
+    private ClientData clientData;
 
-	@SuppressWarnings("unused")
-	private Reservation() {
-	}
+    private Date createDate;
 
-	Reservation(Id aggregateId, ReservationStatus status,
-			ClientData clientData, Date createDate) {
-		this.id = aggregateId;
-		this.status = status;
-		this.clientData = clientData;
-		this.createDate = createDate;
-		this.items = new ArrayList<ReservationItem>();
-	}
+    @SuppressWarnings("unused")
+    private Reservation() {}
 
-	public void add(Product product, int quantity) {
-		if (isClosed())
-			domainError("Reservation already closed");
-		if (!product.isAvailable())
-			domainError("Product is no longer available");
+    public Reservation(Id aggregateId, ReservationStatus status, ClientData clientData, Date createDate) {
+        this.id = aggregateId;
+        this.status = status;
+        this.clientData = clientData;
+        this.createDate = createDate;
+        this.items = new ArrayList<>();
+    }
 
-		if (contains(product)) {
-			increase(product, quantity);
-		} else {
-			addNew(product, quantity);
-		}
-	}
+    public void add(Product product, int quantity) {
+        if (isClosed()) {
+            domainError("Reservation already closed");
+        }
+        if (!product.isAvailable()) {
+            domainError("Product is no longer available");
+        }
 
-	/**
-	 * Sample function closured by policy </br> Higher order function closured
-	 * by policy function</br> </br> Function loads current prices, and prepares
-	 * offer according to the current availability and given discount
-	 * 
-	 * @param discountPolicy
-	 * @return
-	 */
-	public Offer calculateOffer(DiscountPolicy discountPolicy) {
-		List<OfferItem> availabeItems = new ArrayList<OfferItem>();
-		List<OfferItem> unavailableItems = new ArrayList<OfferItem>();
+        if (contains(product)) {
+            increase(product, quantity);
+        } else {
+            addNew(product, quantity);
+        }
+    }
 
-		for (ReservationItem item : items) {
-			if (item.getProduct().isAvailable()) {
-				Discount discount = discountPolicy.applyDiscount(item
-						.getProduct(), item.getQuantity(), item.getProduct()
-						.getPrice());
-				OfferItem offerItem = new OfferItem(item.getProduct()
-						.generateSnapshot(), item.getQuantity(), discount);
+    /**
+     * Sample function closured by policy </br>
+     * Higher order function closured by policy function</br>
+     * </br>
+     * Function loads current prices, and prepares offer according to the current availability and given discount
+     * 
+     * @param discountPolicy
+     * @return
+     */
+    public Offer calculateOffer(DiscountPolicy discountPolicy) {
+        List<OfferItem> availabeItems = new ArrayList<>();
+        List<OfferItem> unavailableItems = new ArrayList<>();
 
-				availabeItems.add(offerItem);
-			} else {
-				OfferItem offerItem = new OfferItem(item.getProduct()
-						.generateSnapshot(), item.getQuantity());
+        for (ReservationItem item : items) {
+            if (item.getProduct()
+                    .isAvailable()) {
+                Discount discount = discountPolicy.applyDiscount(item.getProduct(), item.getQuantity(), item.getProduct()
+                                                                                                            .getPrice());
+                OfferItem offerItem = new OfferItem(item.getProduct()
+                                                        .generateSnapshot(),
+                        item.getQuantity(), discount);
 
-				unavailableItems.add(offerItem);
-			}
-		}
+                availabeItems.add(offerItem);
+            } else {
+                OfferItem offerItem = new OfferItem(item.getProduct()
+                                                        .generateSnapshot(),
+                        item.getQuantity());
 
-		return new Offer(availabeItems, unavailableItems);
-	}
+                unavailableItems.add(offerItem);
+            }
+        }
 
-	private void addNew(Product product, int quantity) {
-		ReservationItem item = new ReservationItem(product, quantity);
-		items.add(item);
-	}
+        return new Offer(availabeItems, unavailableItems);
+    }
 
-	private void increase(Product product, int quantity) {
-		for (ReservationItem item : items) {
-			if (item.getProduct().equals(product)) {
-				item.changeQuantityBy(quantity);
-				break;
-			}
-		}
-	}
+    private void addNew(Product product, int quantity) {
+        ReservationItem item = new ReservationItem(product, quantity);
+        items.add(item);
+    }
 
-	public boolean contains(Product product) {
-		for (ReservationItem item : items) {
-			if (item.getProduct().equals(product))
-				return true;
-		}
-		return false;
-	}
+    private void increase(Product product, int quantity) {
+        for (ReservationItem item : items) {
+            if (item.getProduct()
+                    .equals(product)) {
+                item.changeQuantityBy(quantity);
+                break;
+            }
+        }
+    }
 
-	public boolean isClosed() {
-		return status.equals(ReservationStatus.CLOSED);
-	}
+    public boolean contains(Product product) {
+        for (ReservationItem item : items) {
+            if (item.getProduct()
+                    .equals(product)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-	public void close() {
-		if (isClosed())
-			domainError("Reservation is already closed");
-		status = ReservationStatus.CLOSED;
-	}
+    public boolean isClosed() {
+        return status.equals(ReservationStatus.CLOSED);
+    }
 
-	public List<ReservedProduct> getReservedProducts() {
-		ArrayList<ReservedProduct> result = new ArrayList<ReservedProduct>(
-				items.size());
+    public void close() {
+        if (isClosed()) {
+            domainError("Reservation is already closed");
+        }
+        status = ReservationStatus.CLOSED;
+    }
 
-		for (ReservationItem item : items) {
-			result.add(new ReservedProduct(item.getProduct().getId(),
-					item.getProduct().getName(), item.getQuantity(),
-					calculateItemCost(item)));
-		}
+    public List<ReservedProduct> getReservedProducts() {
+        ArrayList<ReservedProduct> result = new ArrayList<>(items.size());
 
-		return result;
-	}
+        for (ReservationItem item : items) {
+            result.add(new ReservedProduct(item.getProduct()
+                                               .getId(),
+                    item.getProduct()
+                        .getName(),
+                    item.getQuantity(), calculateItemCost(item)));
+        }
 
-	private Money calculateItemCost(ReservationItem item) {
-		return item.getProduct().getPrice().multiplyBy(item.getQuantity());
-	}
+        return result;
+    }
 
-	public ClientData getClientData() {
-		return clientData;
-	}
+    private Money calculateItemCost(ReservationItem item) {
+        return item.getProduct()
+                   .getPrice()
+                   .multiplyBy(item.getQuantity());
+    }
 
-	public Date getCreateDate() {
-		return createDate;
-	}
+    public ClientData getClientData() {
+        return clientData;
+    }
 
-	public ReservationStatus getStatus() {
-		return status;
-	}
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public ReservationStatus getStatus() {
+        return status;
+    }
 }
